@@ -1,6 +1,7 @@
 'use strict';
 var Promise = require('bluebird');
 var request = Promise.promisify(require("request"));
+var tpl = require('./tpl.js');
 
 var preUrl = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential';
 var Wechart = function(opts) {
@@ -13,11 +14,11 @@ var Wechart = function(opts) {
         .then(function(data) {
             try {
                 data = JSON.parse(data);
-            } catch(err) {
+            } catch (err) {
                 return self.updateAccessToken();
             }
 
-            if(self.isValidAccessToken(data)) {
+            if (self.isValidAccessToken(data)) {
                 return Promise.resolve(data);
             } else {
                 return self.updateAccessToken();
@@ -33,27 +34,39 @@ Wechart.prototype = {
     updateAccessToken: function() {
         var self = this;
         return new Promise(function(resolve, reject) {
-            var _url = preUrl + '&appid=' + self.appID + '&secret='+ self.appSecret;
-            request({url: _url, json: true}).then(function(response) {
+            var _url = preUrl + '&appid=' + self.appID + '&secret=' + self.appSecret;
+            request({ url: _url, json: true }).then(function(response) {
                 var data = response.body;
                 var now = new Date().getTime();
-                var expires_in = now + (data.expires_in -20) * 1000;
+                var expires_in = now + (data.expires_in - 20) * 1000;
                 data.expires_in = expires_in;
                 resolve(data);
-            });            
+            });
         })
     },
     isValidAccessToken: function(data) {
-        if(!data || !data.access_token || !data.expires_in) {
+        if (!data || !data.access_token || !data.expires_in) {
             return false;
         }
         var now = new Date().getTime();
         var expires_in = data.expires_in;
-        if(now < expires_in) {
+        if (now < expires_in) {
             return true;
         } else {
             return false;
         }
+    },
+    reply: function() {
+        var message = this.message;  // 微信发来的消息
+        var replyContent = this.replyContent;  // 回复的内容
+        var replyXML = tpl.compiled(message, replyContent);
+
+         console.log('回复给微信服务器的消息');
+        console.log(replyXML);
+
+        this.status = 200;
+        this.type = 'application/xml';
+        this.body = replyXML;
     }
 };
 module.exports = Wechart;

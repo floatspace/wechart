@@ -7,9 +7,9 @@ var util = require('./libs/util.js');
 var token_file = path.join(__dirname, './config/accessToken.txt');
 var config = {
     wechart: {
-        appID: 'xxx',
-        appSecret: 'xxx',
-        token: 'xxx',
+        appID: 'wx560c02eceb4a2e66',
+        appSecret: '1f9265d717973987ac1abe6561cc43f0',
+        token: 'floatspace19881011fearless',
         getAccessToken: function() {
             return util.readFileAsync(token_file);
         },

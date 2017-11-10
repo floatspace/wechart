@@ -3,10 +3,11 @@ var sha1 = require('sha1');
 var getRawBody = require('raw-body');
 var Wechart = require('./wechart.js');
 var util = require('../libs/util.js');
+var eventHandle = require('./eventHandle.js');
 
 module.exports = function(opts) {
     // access_token判断逻辑
-    // var wechart = new Wechart(opts);
+    var wechart = new Wechart(opts);
     return function*(next) {
 
         var token = opts.token;
@@ -48,26 +49,14 @@ module.exports = function(opts) {
             this.message = message;
 
             // 通过关注与取关或者发送消息测试输出信息
+            console.log('微信发来的消息')
             console.log(message);
 
-            // 设置回复消息(关注与取关)
-            if (message.MsgType === 'event') {
-                if (message.Event === 'subscribe') {
-                    var now = new Date().getTime();
-                    that.status = 200;
-                    that.type = 'application/xml';
+            // 处理各种事件类型及组织相关回复内容 -> 输出回复content
+            yield eventHandle.dealEvent.call(this, next);
 
-                    var replyXml = '<xml>' +
-                        '<ToUserName><![CDATA[' + message.FromUserName + ']]></ToUserName>' +
-                        '<FromUserName><![CDATA[' + message.ToUserName + ']]></FromUserName>' +
-                        '<CreateTime>' + now + '</CreateTime>' +
-                        '<MsgType><![CDATA[text]]></MsgType>' +
-                        '<Content><![CDATA[你好, 欢迎来到微信开发者的世界, FLS!]]></Content>' +
-                        '</xml>';
-                    that.body = replyXml;
-                    return;
-                }
-            }
+            // 设置回复模板并回复
+            wechart.reply.call(this);
         }
     };
 };
