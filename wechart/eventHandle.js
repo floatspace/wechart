@@ -1,6 +1,10 @@
 'use strict';
 
-var preUploadUrl = 'https://api.weixin.qq.com/cgi-bin/media/upload?access_token=';
+var Wechart = require('./wechart.js');
+var config = require('./config.js');
+
+var wechart = new Wechart(config.wechart);
+
 exports.dealEvent = function*(next) {
     var msg = this.message;
     var _res;
@@ -24,7 +28,11 @@ exports.dealEvent = function*(next) {
                 url: 'https://www.baidu.com/'
             }];
         } else if(msg.Content == '4') {
-            // _res = wechart.uploadMedia(url, 'image');
+            var data = yield wechart.uploadMaterial('image', __dirname + '/../asset/01.png');
+            _res = {
+                type: 'image',
+                media_id: data.media_id
+            };
         }
     }
     this.replyContent = _res;
