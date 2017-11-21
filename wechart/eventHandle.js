@@ -1,5 +1,5 @@
 'use strict';
-
+var path = require('path');
 var Wechart = require('./wechart.js');
 var config = require('./config.js');
 
@@ -28,7 +28,17 @@ exports.dealEvent = function*(next) {
                 url: 'https://www.baidu.com/'
             }];
         } else if(msg.Content == '4') {
-            var data = yield wechart.uploadMaterial('image', __dirname + '/../asset/01.png');
+            var data = yield wechart.uploadMaterial('image', path.resolve(__dirname, '../asset/01.png'));
+            console.log('临时素材接口测试');
+            console.log(data);
+            _res = {
+                type: 'image',
+                media_id: data.media_id
+            };
+        } else if(msg.Content == '5') {
+            var data = yield wechart.uploadMaterial('image', path.resolve(__dirname, '../asset/02.png'), {type: 'image'});
+            console.log('永久素材接口测试');
+            console.log(data);
             _res = {
                 type: 'image',
                 media_id: data.media_id

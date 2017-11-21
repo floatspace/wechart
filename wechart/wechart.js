@@ -2,14 +2,22 @@
 var fs = require('fs');
 var Promise = require('bluebird');
 var request = Promise.promisify(require("request"));
+var _ = require('lodash');
 
 var tpl = require('./tpl.js');
 
 var preUrl = 'https://api.weixin.qq.com/cgi-bin';
 var preAccessTokenUrl = preUrl + '/token?grant_type=client_credential';
 var wechartApi = {
-    upload: {
-        temp: preUrl + '/media/upload', // ?access_token=ACCESS_TOKEN&type=TYPE
+    temporary: {
+        upload: preUrl + '/media/upload?', // ?access_token=ACCESS_TOKEN&type=TYPE  {media: MEDIA}
+        fetch: preUrl + '/media/get?'      // ?access_token=ACCESS_TOKEN&media_id=MEDIA_ID
+    },
+    permanent: {
+        upload: preUrl + '/material/add_material?',  // ?access_token=ACCESS_TOKEN&type=TYPE
+        uploadNews: preUrl + '/material/add_news?',  // ?access_token=ACCESS_TOKEN
+        uploadNewsPic: preUrl + '/media/uploadimg?', // ?access_token=ACCESS_TOKEN
+        fetch: preUrl + '/material/get_material?'    // ?access_token=ACCESS_TOKEN  {"media_id":MEDIA_ID}
     }
 };
 
@@ -91,28 +99,67 @@ Wechart.prototype = {
         this.type = 'application/xml';
         this.body = replyXML;
     },
-    uploadMaterial: function(type, filePath) {
+    uploadMaterial: function(type, material, permParam) {
         var self = this;
-        var formData = {
-            media: fs.createReadStream(filePath)
-        };
+        var _url = '';
+        var _formData = {};
+
+        if (permParam) {
+            _url = wechartApi.permanent.upload;
+            _.extend(_formData, permParam);
+        } else {
+            _url = wechartApi.temporary.upload;
+        }
+        // type
+        if(type === 'pic') {
+            _url = wechartApi.permanent.uploadNewsPic;
+        }
+
+        if (type === 'news') {
+            _url = wechartApi.permanent.uploadNews;
+            _formData = material;  // array
+        } else {
+            _formData.media = fs.createReadStream(material);  // path string 
+        }
+
         return new Promise(function(resolve, reject) {
             self.fetchAccessToken()
                 .then(function(data) {
-                    var _url = wechartApi.upload.temp + '?access_token=' + data.access_token + '&type=' + type;
-                    request({method: 'POST', url: _url, json: true, formData: formData})
-                    .then(function(res) {
-                        var _data = res.body;
-                        if(_data) {
-                            resolve(_data);
-                        } else {
-                            throw new Error('upload material failed');
-                        }
-                    })
-                    .catch(function(err) {
-                        reject(err);
-                    });
-            });
+                    _url += 'access_token=' + data.access_token;
+                    if(!permParam) {
+                        _url += '&type=' + type;
+                    }
+
+                    if(permParam && type === 'image') {
+                        _formData.access_token = data.access_token;
+                    }
+
+                    var options = {
+                        method: 'POST',
+                        url: _url,
+                        json: true
+                    };
+
+                    if(type === 'news') {
+                        options.body = _formData;
+                    } else {
+                        options.formData = _formData;
+                    }
+                    console.log(options);
+                    
+                    request(options)
+                        .then(function(res) {
+                            var _data = res.body;
+                            if(_data) {
+                                resolve(_data);
+                            } else {
+                                throw new Error('upload material failed');
+                            }
+                        })
+                        .catch(function(err) {
+                            reject(err);
+                        });
+                });
         });
     }
 };
